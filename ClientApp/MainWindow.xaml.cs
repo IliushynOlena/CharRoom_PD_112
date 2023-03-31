@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -25,57 +26,88 @@ namespace ClientApp
     public partial class MainWindow : Window
     {
         ObservableCollection<MessageInfo> messages = new ObservableCollection<MessageInfo>();
+        NetworkStream ns = null;
+        StreamReader sr = null;
+        StreamWriter sw = null;
 
         IPEndPoint serverEndPoint;
-        UdpClient client;
-        //const string serverAddress = "127.0.0.1";
-        //const short serverPort = 4040;
+       
+        TcpClient tcpClient;    
         public MainWindow()
         {
             InitializeComponent();
-            client = new UdpClient();
+            tcpClient = new TcpClient();    
             string serverAddress = ConfigurationManager.AppSettings["ServerAddress"]!;
             short serverPort = short.Parse( ConfigurationManager.AppSettings["ServerPort"]!);
             serverEndPoint = new IPEndPoint(IPAddress.Parse(serverAddress), serverPort);  
             this.DataContext = messages;
         }
-        async void Listen()
+        private async void Listen()
         {
-            while (true)
+            try
             {
-                var result = await client.ReceiveAsync();
-                string message = Encoding.UTF8.GetString(result.Buffer);
-                messages.Add(new MessageInfo(message));
-            }           
+                while (true)
+                {
+                    string? message = await sr.ReadLineAsync();
+                    messages.Add(new MessageInfo(message));
+                }
+            }
+            catch (Exception ex)
+            {
 
+                MessageBox.Show(ex.Message);
+            }
+            
         }
 
         private void SendBtnClick(object sender, RoutedEventArgs e)
         {           
-            string message = msgTextBox.Text;
-            SendMessage(message);
+            string message = msgTextBox.Text;          
+            sw.WriteLine(message);
+            sw.Flush();
         }
 
-        private void JoinBtnClick(object sender, RoutedEventArgs e)
+        private void ConnectionBtnClick(object sender, RoutedEventArgs e)
         {
-            string message = "$<join>";
-            SendMessage(message);
-            Listen();
-        }
-        private async void SendMessage(string message)
-        {
-            byte[] data = Encoding.UTF8.GetBytes(message);
-            await client.SendAsync(data, data.Length, serverEndPoint);
+            try
+            {
+                tcpClient.Connect(serverEndPoint);
+                ns = tcpClient.GetStream();
+                sr = new StreamReader(ns);
+                sw = new StreamWriter(ns);
+                Listen();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
+       
         }
 
+        private void DisconnectBtnClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                sw.WriteLine("exit");
+                sw.Flush();
+                ns.Close();
+                tcpClient.Close();
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+          
+        }
     }
     class MessageInfo
     {
         public string Message { get; set; }
         public DateTime Time { get; set; }
-        public MessageInfo(string message)
+        public MessageInfo(string? message)
         {
-            Message = message;
+            Message = message ?? "";
             Time = DateTime.Now;
         }
         public override string ToString()

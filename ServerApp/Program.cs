@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -9,40 +10,34 @@ namespace ServerApp
     class ChatServer
     {
         const short port = 4040;
-        const string JOIN_CMD = "$<join>";
-        HashSet<IPEndPoint> members = new HashSet<IPEndPoint>();
-        UdpClient server = new UdpClient(port);
-        IPEndPoint clientIpEndPoint = null;
-        private void AddMember(IPEndPoint member)
+        const string address = "127.0.0.1";
+       
+        TcpListener listener = null;
+        public ChatServer()
         {
-            members.Add(member);
-            Console.WriteLine("Member was added!!!");
-        }
-        private void SendToAll(byte[]data)
-        {
-            foreach (IPEndPoint member in members)
-            {
-                server.SendAsync(data, data.Length, member);
-            }
+            listener = new TcpListener(IPAddress.Parse(address), port);
         }
         public void Start()
-        {
+        { 
+            listener.Start();
+            Console.WriteLine("Waiting for connection ........");
+            TcpClient client =  listener.AcceptTcpClient();
+            Console.WriteLine("Connected");
+            NetworkStream ns = client.GetStream();
+            StreamReader sr = new StreamReader(ns);
+            StreamWriter sw = new StreamWriter(ns);
             while (true)
             {
-                byte[] data = server.Receive(ref clientIpEndPoint);
-                string message = Encoding.UTF8.GetString(data);
+
+                string message = sr.ReadLine();
+                if (message == "exit") { listener.Stop();break; }
                 Console.WriteLine($" {message} at {DateTime.Now.ToShortTimeString()} " +
-                    $"from {clientIpEndPoint}");
-                switch (message)
-                {
-                    case JOIN_CMD:
-                       AddMember(clientIpEndPoint); 
-                        break;
-                    default:
-                        SendToAll(data);
-                        break;
-                }
+                    $"from {client.Client.LocalEndPoint}");
+                sw.WriteLine("Thanks!!!!");
+                sw.Flush(); 
+             
             }
+           
         }
     }
     internal class Program
@@ -51,7 +46,16 @@ namespace ServerApp
         static void Main(string[] args)
         {
             ChatServer server = new ChatServer();
-            server.Start();
+            try
+            {
+                server.Start();
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine(ex.Message);
+            }
+           
 
            
            
