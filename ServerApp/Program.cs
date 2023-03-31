@@ -9,8 +9,8 @@ namespace ServerApp
 {
     class ChatServer
     {
-        const short port = 4040;
-        const string address = "127.0.0.1";
+        const short port = 4041;
+        const string address = "10.7.13.123";
        
         TcpListener listener = null;
         public ChatServer()
@@ -33,7 +33,7 @@ namespace ServerApp
                 if (message == "exit") { listener.Stop();break; }
                 Console.WriteLine($" {message} at {DateTime.Now.ToShortTimeString()} " +
                     $"from {client.Client.LocalEndPoint}");
-                sw.WriteLine("Thanks!!!!");
+                sw.WriteLine(message);
                 sw.Flush(); 
              
             }
