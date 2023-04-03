@@ -8,7 +8,7 @@ namespace ServerApp
 {
     class ChatServer
     {
-        const short port = 4040;
+        const short port = 4041;
         const string JOIN_CMD = "$<join>";
         HashSet<IPEndPoint> members = new HashSet<IPEndPoint>();
         UdpClient server = new UdpClient(port);
